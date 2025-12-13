@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: agroman-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agroman}
+      POSTGRES_USER: ${POSTGRES_USER:-agroman}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agroman}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backend:
+    image: agroman/backend:latest
+    container_name: agroman-backend
+    build: ./backend
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8000/health || exit 1"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  frontend:
+    image: agroman/frontend:latest
+    container_name: agroman-frontend
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
